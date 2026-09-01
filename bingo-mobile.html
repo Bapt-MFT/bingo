@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Bingo personnalisé</title>
+  <!-- Ajout de la librairie PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 16px;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      line-height: 1.3;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      font-size: 16px; /* évite le zoom automatique sur iOS */
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 12px 18px;
+      margin: 10px 8px 10px 0;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      min-height: 44px; /* taille tactile confortable */
+      width: 100%;
+      max-width: 320px;
+      display: block;
+    }
+
+    .btn-generate { background: #2563eb; color: white; }
+    .btn-pdf { background: #dc2626; color: white; display: none; } /* Caché par défaut */
+
+    /* Conteneur pour le PDF */
+    #print-area {
+      padding: 10px;
+      background: #f5f5f5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 20px;
+    }
+
+    .cell {
+      background: white;
+      border: 2px solid #ccc;
+      padding: 6px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      min-height: 70px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+      font-size: clamp(0.55rem, 2.6vw, 0.9rem);
+      line-height: 1.15;
+    }
+
+    .cell.checked {
+      background: #4ade80;
+      border-color: #22c55e;
+      color: #064e3b;
+      font-weight: bold;
+    }
+
+    .hint {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 8px;
+    }
+
+    /* Style spécifique pour l'impression/PDF */
+    @media print {
+      .no-print { display: none !important; }
+    }
+
+    /* Ajustements pour très petits écrans */
+    @media (max-width: 380px) {
+      .grid { gap: 4px; }
+      .cell { padding: 4px; border-width: 1px; min-height: 60px; }
+    }
+
+    /* Sur écran large, les boutons ne prennent pas toute la largeur */
+    @media (min-width: 600px) {
+      button { width: auto; display: inline-block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <h1>🎯 Mais que va dire le grand manitou ?</h1>
+    <p>Entre tes textes (1 par ligne). Minimum 25 éléments.</p>
+    <textarea id="items" placeholder="Exemple :
+Quelqu'un parle trop fort
+Blague nulle
+Café renversé"></textarea>
+
+    <button class="btn-generate" onclick="generateBingo()">Générer une carte</button>
+    <button id="download-btn" class="btn-pdf" onclick="downloadPDF()">Télécharger en PDF</button>
+  </div>
+
+  <!-- C'est cette zone qui sera convertie en PDF -->
+  <div id="print-area">
+    <h2 id="pdf-title" style="display:none; text-align:center;">Ma Carte de Bingo</h2>
+    <div class="grid" id="bingo"></div>
+  </div>
+
+  <script>
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function generateBingo() {
+      const input = document.getElementById('items').value
+        .split('\n')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+      if (input.length < 25) {
+        alert('Il faut au moins 25 textes pour une carte de bingo.');
+        return;
+      }
+
+      const grid = document.getElementById('bingo');
+      grid.innerHTML = '';
+
+      const selected = shuffle([...input]).slice(0, 25);
+
+      selected.forEach(text => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = text;
+        cell.onclick = () => cell.classList.toggle('checked');
+        grid.appendChild(cell);
+      });
+
+      // Afficher le bouton PDF une fois la grille générée
+      document.getElementById('download-btn').style.display = 'inline-block';
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('print-area');
+      const title = document.getElementById('pdf-title');
+
+      // Afficher temporairement le titre pour le PDF
+      title.style.display = 'block';
+
+      const options = {
+        margin:       10,
+        filename:     'mon-bingo.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Générer le PDF
+      html2pdf().set(options).from(element).save().then(() => {
+        // Recacher le titre après la génération
+        title.style.display = 'none';
+      });
+    }
+  </script>
+</body>
+</html>
